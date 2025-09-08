@@ -91,4 +91,13 @@ public class ProductService {
         response.setFarmerEmail(product.getFarmerEmail());
         return response;
     }
+
+    public List<ProductResponse> getAllAvailableProducts() {
+        return productRepository.findAll()
+                .stream()
+                .filter(p -> p.getQuantity() > 0) // only show products with stock
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
 }
