@@ -1,5 +1,6 @@
 package com.Nisal.Agrimatch.controller;
 
+import com.Nisal.Agrimatch.dto.BuyerReportDTO;
 import com.Nisal.Agrimatch.dto.OrderRequest;
 import com.Nisal.Agrimatch.dto.OrderResponse;
 import com.Nisal.Agrimatch.dto.ProductResponse;
@@ -47,4 +48,25 @@ public class OrderController {
         List<OrderResponse> orders = orderService.getBuyerOrders();
         return ResponseEntity.ok(orders);
     }
+
+    // In OrderController.java
+    @DeleteMapping("/orders/{orderId}")
+    public ResponseEntity<OrderResponse> cancelOrder(@PathVariable Long orderId) {
+        OrderResponse response = orderService.cancelOrder(orderId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/orders/report/orders") // for filtered orders
+    public ResponseEntity<List<OrderResponse>> getOrdersReport(@RequestParam(required = false) String status) {
+        List<OrderResponse> orders = orderService.getOrdersByStatus(status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/orders/report/summary") // for buyer summary
+    public ResponseEntity<BuyerReportDTO> getReport() {
+        BuyerReportDTO report = orderService.getBuyerReport();
+        return ResponseEntity.ok(report);
+    }
+
+
 }

@@ -1,5 +1,6 @@
 package com.Nisal.Agrimatch.controller;
 
+import com.Nisal.Agrimatch.dto.FarmerReportDTO;
 import com.Nisal.Agrimatch.dto.OrderResponse;
 import com.Nisal.Agrimatch.service.FarmerOrderService;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +40,27 @@ public class FarmerOrderController {
     public ResponseEntity<OrderResponse> completeOrder(@PathVariable Long orderId) {
         System.out.println(">>> Entered completeOrder endpoint with ID: " + orderId);
         return ResponseEntity.ok(farmerOrderService.completeOrder(orderId));
+    }
+
+    // Mark order as REJECTED
+    @PreAuthorize("hasRole('FARMER')")
+    @PutMapping("/{orderId}/reject")
+    public ResponseEntity<OrderResponse> rejectOrder(@PathVariable Long orderId) {
+        return ResponseEntity.ok(farmerOrderService.rejectOrder(orderId));
+    }
+
+    // Full summary report for farmer
+    @GetMapping("/report/summary")
+    public ResponseEntity<FarmerReportDTO> getReport() {
+        FarmerReportDTO report = farmerOrderService.getFarmerReport();
+        return ResponseEntity.ok(report);
+    }
+
+    // Orders report, optionally filtered by status
+    @GetMapping("/report/orders")
+    public ResponseEntity<List<OrderResponse>> getOrdersReport(@RequestParam(required = false) String status) {
+        List<OrderResponse> orders = farmerOrderService.getOrdersByStatus(status);
+        return ResponseEntity.ok(orders);
     }
 
 

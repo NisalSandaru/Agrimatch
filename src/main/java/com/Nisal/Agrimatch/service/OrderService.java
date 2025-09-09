@@ -1,5 +1,6 @@
 package com.Nisal.Agrimatch.service;
 
+import com.Nisal.Agrimatch.dto.BuyerReportDTO;
 import com.Nisal.Agrimatch.dto.OrderRequest;
 import com.Nisal.Agrimatch.dto.OrderResponse;
 import com.Nisal.Agrimatch.entity.Order;
@@ -74,4 +75,63 @@ public class OrderService {
         response.setStatus(order.getStatus());
         return response;
     }
+
+
+    public OrderResponse cancelOrder(Long orderId) {
+        String buyerEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // Fetch order
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Only allow the buyer who placed the order to cancel it
+        if (!order.getBuyerEmail().equals(buyerEmail)) {
+            throw new RuntimeException("You are not authorized to cancel this order");
+        }
+
+        // Can only cancel pending orders
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException("Only pending orders can be cancelled");
+        }
+
+        // Restore product stock
+        Product product = productRepository.findById(order.getProductId())
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        product.setQuantity(product.getQuantity() + order.getQuantity());
+        productRepository.save(product);
+
+        // Update order status
+        order.setStatus(OrderStatus.CANCELLED);
+        Order savedOrder = orderRepository.save(order);
+
+        return mapToResponse(savedOrder);
+    }
+
+    public List<OrderResponse> getOrdersByStatus(String status) {
+        String buyerEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        return orderRepository.findByBuyerEmail(buyerEmail)
+                .stream()
+                .filter(o -> status == null || o.getStatus().name().equalsIgnoreCase(status))
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public BuyerReportDTO getBuyerReport() {
+        String buyerEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        List<Order> orders = orderRepository.findByBuyerEmail(buyerEmail);
+
+        BuyerReportDTO report = new BuyerReportDTO();
+        report.setTotalOrders(orders.size());
+        report.setCompletedOrders((int) orders.stream().filter(o -> o.getStatus() == OrderStatus.COMPLETED).count());
+        report.setPendingOrders((int) orders.stream().filter(o -> o.getStatus() == OrderStatus.PENDING).count());
+        report.setTotalSpent(orders.stream().filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .mapToDouble(Order::getTotalPrice)
+                .sum());
+
+        return report;
+    }
+
+
 }

@@ -9,4 +9,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // Find all orders for a specific buyer
     List<Order> findByBuyerEmail(String buyerEmail);
+
+    // ✅ Add this to support findByProductId
+    List<Order> findByProductId(Long productId);
 }
