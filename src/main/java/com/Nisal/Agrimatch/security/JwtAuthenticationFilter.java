@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -37,24 +38,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            String email = jwtUtil.extractEmail(token);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                String email = jwtUtil.extractEmail(token);
 
-                // Fetch user from DB to get role
-                User user = userRepository.findByEmail(email).orElse(null);
-                if (user != null) {
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    email,
-                                    null,
-                                    Collections.singletonList(
-                                            new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
-                                    )
-                            );
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                    User user = userRepository.findByEmail(email).orElse(null);
+
+                    if (user != null && jwtUtil.validateToken(token, email)) {
+
+                        // Wrap user as Spring Security principal
+                        org.springframework.security.core.userdetails.User principal = new org.springframework.security.core.userdetails.User(
+
+                                user.getEmail(),
+                                user.getPassword(),
+                                Collections.singletonList(
+                                        new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+                                )
+                        );
+
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(
+                                        principal,
+                                        null,
+                                        principal.getAuthorities()
+                                );
+
+                        authentication.setDetails(
+                                new WebAuthenticationDetailsSource().buildDetails(request)
+                        );
+
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                        System.out.println("Authenticated user: " + email + " | Role: " + user.getRole());
+                        System.out.println("Granted Authorities: " + authentication.getAuthorities());
+
+                    }
                 }
+            } catch (Exception e) {
+                System.out.println("JWT error: " + e.getMessage());
             }
         }
 

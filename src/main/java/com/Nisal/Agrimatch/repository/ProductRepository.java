@@ -9,4 +9,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Find all products by farmer email
     List<Product> findByFarmerEmail(String farmerEmail);
+
 }
